@@ -81,7 +81,7 @@ def darus_download(repo_id, file_id, file_path):
     urllib.request.urlretrieve(darus_url, file_path)
 
 
-def load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, device="cuda", dtype=torch.float64, compile_model=True):
+def load_fnocg_model(problem="thermal", dim=2, bc="per", rtol=1e-6, device="cuda", dtype=torch.float64, compile_model=True):
     device_key = "cpu" if device == "cpu" else "cuda"
     dtype_key = "float32" if dtype == torch.float32 else "float64"
     model_name = f"fnocg_thermal_2d_per"
@@ -89,7 +89,7 @@ def load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, device="cu
     if (not compile_model) or (device == "cpu"):
         print("Creating model in Python...", end=" ")
         with torch.inference_mode():
-            model = create_fnocg_model(model_name=model_name, n_layers=n_layers, device=device, dtype=dtype)
+            model = create_fnocg_model(model_name=model_name, rtol=rtol, device=device, dtype=dtype)
 
         warmup_model(model, device=device, dtype=dtype)
         print("Successful", flush=True)
@@ -98,7 +98,7 @@ def load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, device="cu
     try:
         # Try to load precompiled *.so file
         print("Trying to load precompiled model...", end=" ")
-        so_path = os.path.join("models", f"{model_name}_{n_layers}l_{device_key}_{dtype_key}.so")
+        so_path = os.path.join("models", f"{model_name}_{rtol}rtol_{device_key}_{dtype_key}.so")
         with torch.inference_mode():
             model = torch._export.aot_load(so_path, device)
         
@@ -109,7 +109,7 @@ def load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, device="cu
         # Recreate model in PyTorch and then try to compile it
         print("Failed", flush=True)
         print("Creating model in Python...", end=" ")
-        model = create_fnocg_model(model_name=model_name, n_layers=n_layers, device=device, dtype=dtype)
+        model = create_fnocg_model(model_name=model_name, rtol=rtol, device=device, dtype=dtype)
         warmup_model(model, device=device, dtype=dtype)
         print("Successful", flush=True)
 
@@ -117,7 +117,7 @@ def load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, device="cu
             # First try to compile the recreated model to a *.so file and then load it
             print("Trying to compile to a C++ shared library...", end=" ")
             compile_options = {"max_autotune": True, "epilogue_fusion": True, "triton.cudagraphs": True}
-            so_path = os.path.join("models", f"{model_name}_{n_layers}l_{device_key}_{dtype_key}.so")
+            so_path = os.path.join("models", f"{model_name}_{rtol}rtol_{device_key}_{dtype_key}.so")
             with torch.no_grad():
                 param_field = torch.rand(1, 1, 400, 400, device=device, dtype=dtype)
                 loading = torch.eye(2, device=device, dtype=dtype)
@@ -128,7 +128,7 @@ def load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, device="cu
             warmup_model(model, device=device, dtype=dtype)
             print("Successful", flush=True)
             return model
-        except:
+        except Exception as e:
             print("Failed", flush=True)
             print("Trying to compile in Python environment...", end=" ")
             try:
@@ -145,11 +145,11 @@ def load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, device="cu
                 return model
 
 
-def create_fnocg_model(model_name, n_layers, device, dtype):
+def create_fnocg_model(model_name, rtol, device, dtype):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     fnocg_egg_path = os.path.abspath(os.path.join(dir_path, "models", f"{model_name}.egg"))
     sys.path.append(fnocg_egg_path)
-    model = torch.load(os.path.join("models", f"{model_name}_{n_layers}l.pt"), weights_only=False, map_location=device)
+    model = torch.load(os.path.join("models", f"{model_name}.pt"), weights_only=False, map_location=device)
     model = model.to(device=device, dtype=dtype)
     return model
 

@@ -50,7 +50,7 @@ samples = MicrostructureImageDataset(
 print('Number of samples in dataset:', len(samples))
 
 # Load the simulation model
-simulation = load_fnocg_model(problem="thermal", dim=2, bc="per", n_layers=15, 
+simulation = load_fnocg_model(problem="thermal", dim=2, bc="per",
                              device=device, dtype=dtype, compile_model=True)
 
 # Load the surrogate model if available

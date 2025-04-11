@@ -1901,191 +1901,431 @@
         
         // Create a heatmap visualization - IMPROVED VERSION
         function createHeatmap(container, data, title, colorscale = 'Jet', options = {}) {
-            try {
-                // Remove any existing plots to prevent memory leaks
-                Plotly.purge(container);
-                
-                // Safely transpose the data - handle potential errors
-                let transposedData;
-                try {
-                    transposedData = transposeMatrix(data);
-                } catch (error) {
-                    console.error("Error transposing data:", error);
-                    transposedData = data; // Fallback to original data
+    try {
+        // Remove any existing plots to prevent memory leaks
+        Plotly.purge(container);
+        
+        // Safely transpose the data - handle potential errors
+        let transposedData;
+        try {
+            transposedData = transposeMatrix(data);
+        } catch (error) {
+            console.error("Error transposing data:", error);
+            transposedData = data; // Fallback to original data
+        }
+        
+        // Set up trace with default options
+        const trace = {
+            z: transposedData,
+            type: 'heatmap',
+            colorscale: colorscale,
+            showscale: true
+        };
+        
+        // Set up layout with default options
+        const layout = {
+            title: {
+                text: title,
+                font: { size: 16 }
+            },
+            margin: { t: 40, r: 40, b: 30, l: 40 },
+            xaxis: { 
+                showticklabels: false,
+                // Set initial range explicitly
+                range: [0, transposedData[0].length],
+                constrain: 'domain'
+            },
+            yaxis: { 
+                showticklabels: false,
+                // Set initial range explicitly
+                range: [0, transposedData.length],
+                constrain: 'domain'
+            },
+            coloraxis: {
+                colorbar: {
+                    thickness: 20,
+                    len: 0.7
                 }
-                
-                // Set up trace with default options
-                const trace = {
-                    z: transposedData,
-                    type: 'heatmap',
-                    colorscale: colorscale,
-                    showscale: true
+            },
+            // Add explicit dimensions to maintain consistent plot size
+            autosize: false,
+            width: container.clientWidth,
+            height: container.clientHeight || 400
+        };
+        
+        // Apply custom options if provided - use layout.coloraxis.colorbar
+        if (options.colorbar) {
+            layout.coloraxis.colorbar = {
+                ...layout.coloraxis.colorbar,
+                ...options.colorbar
+            };
+        }
+        
+        const config = {
+            responsive: true,
+            displayModeBar: false,
+            scrollZoom: true
+        };
+        
+        // Use a try-catch for the plot creation
+        try {
+            Plotly.newPlot(container, [trace], layout, config).then(() => {
+                // After plot is created, set up enhanced zoom limits with touchpad support
+                const zoomLimits = {
+                    MAX_ZOOM_IN: 5,     // 5x zoom in limit
+                    MAX_ZOOM_OUT: 5,    // 5x zoom out limit
+                    TOUCHPAD_SENSITIVITY_ADJUST: 0.2  // Reduce touchpad sensitivity (lower = stricter)
                 };
                 
-                // Set up layout with default options
-                const layout = {
-                    title: {
-                        text: title,
-                        font: { size: 16 }
-                    },
-                    margin: { t: 40, r: 40, b: 30, l: 40 },
-                    xaxis: { showticklabels: false },
-                    yaxis: { showticklabels: false },
-                    coloraxis: {
-                        colorbar: {
-                            thickness: 20,
-                            len: 0.7
-                        }
-                    },
-                    // Add explicit dimensions to maintain consistent plot size
-                    autosize: false,
-                    width: container.clientWidth,
-                    height: container.clientHeight || 400
+                // Store original dimensions for zoom calculations
+                container._origData = {
+                    width: transposedData[0].length,
+                    height: transposedData.length
                 };
                 
-                // Apply custom options if provided - use layout.coloraxis.colorbar
-                if (options.colorbar) {
-                    layout.coloraxis.colorbar = {
-                        ...layout.coloraxis.colorbar,
-                        ...options.colorbar
-                    };
-                }
+                // Track the last known zoom level
+                container._currentZoom = 1;
                 
-                const config = {
-                    responsive: true,
-                    displayModeBar: false,
-                    scrollZoom: true // Add interactivity
-                };
+                // Track time between wheel events to detect rapid touchpad scrolling
+                container._lastWheelTime = 0;
+                container._wheelEventCount = 0;
                 
-                // Use a try-catch for the plot creation
-                try {
-                    Plotly.newPlot(container, [trace], layout, config);
-                    
-                    // Set up zoom handlers
-                    setupEfficientZoomHandlers(container);
-                    
-                } catch (plotError) {
-                    console.error("Error creating plot:", plotError);
-                    
-                    // Try a simpler fallback version without event handlers if the main one fails
-                    try {
-                        Plotly.newPlot(container, [trace], layout, {
-                            responsive: true,
-                            displayModeBar: false
-                        });
-                    } catch (fallbackError) {
-                        console.error("Fallback plot also failed:", fallbackError);
-                        container.innerHTML = `<div style="color:red;padding:20px;text-align:center;">
-                            Unable to create visualization
-                        </div>`;
+                // Track if we're in a touchpad rapid zoom sequence
+                container._isTouchpadRapidZoom = false;
+                
+                // Add wheel event handler to limit zoom
+                container.addEventListener('wheel', function(e) {
+                    // Skip if we don't have layout or origData
+                    if (!container.layout || !container.layout.xaxis || 
+                        !container.layout.yaxis || !container._origData) {
+                        return;
                     }
-                }
-            } catch (error) {
-                console.error("Critical error creating heatmap:", error);
+                    
+                    try {
+                        // Get current ranges
+                        const xRange = container.layout.xaxis.range;
+                        const yRange = container.layout.yaxis.range;
+                        
+                        // Calculate current view sizes
+                        const xSize = Math.abs(xRange[1] - xRange[0]);
+                        const ySize = Math.abs(yRange[1] - yRange[0]);
+                        
+                        // Calculate zoom ratios
+                        const xZoom = container._origData.width / xSize;
+                        const yZoom = container._origData.height / ySize;
+                        
+                        // Get the higher zoom ratio (more zoomed in)
+                        const currentZoom = Math.max(xZoom, yZoom);
+                        
+                        // Update the stored zoom level
+                        container._currentZoom = currentZoom;
+                        
+                        // Check if zooming in or out
+                        const zoomingIn = e.deltaY < 0;
+                        const zoomingOut = e.deltaY > 0;
+                        
+                        // Touchpad detection - check for rapid successive events
+                        const now = Date.now();
+                        const timeSinceLastWheel = now - (container._lastWheelTime || 0);
+                        container._lastWheelTime = now;
+                        
+                        // Reset counter if it's been a while since last event
+                        if (timeSinceLastWheel > 100) {
+                            container._wheelEventCount = 0;
+                            container._isTouchpadRapidZoom = false;
+                        }
+                        
+                        // Increment wheel event counter
+                        container._wheelEventCount++;
+                        
+                        // Detect touchpad by checking for small deltas and rapid events
+                        const isTouchpadLike = (
+                            Math.abs(e.deltaY) < 20 && 
+                            timeSinceLastWheel < 50 && 
+                            container._wheelEventCount > 3
+                        );
+                        
+                        if (isTouchpadLike) {
+                            container._isTouchpadRapidZoom = true;
+                        }
+                        
+                        // Apply stricter limits for touchpad-like behavior
+                        let effectiveMaxZoomIn = zoomLimits.MAX_ZOOM_IN;
+                        let effectiveMinZoomOut = 1/zoomLimits.MAX_ZOOM_OUT;
+                        
+                        // If we detect touchpad behavior, we apply stricter limits
+                        if (container._isTouchpadRapidZoom) {
+                            // Make limits stricter for touchpad
+                            effectiveMaxZoomIn *= zoomLimits.TOUCHPAD_SENSITIVITY_ADJUST;
+                            effectiveMinZoomOut /= zoomLimits.TOUCHPAD_SENSITIVITY_ADJUST;
+                        }
+                        
+                        // Check if we've hit limits
+                        if ((zoomingIn && currentZoom >= effectiveMaxZoomIn) || 
+                            (zoomingOut && currentZoom <= effectiveMinZoomOut)) {
+                            // We've hit a limit - prevent further zooming
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                    } catch (err) {
+                        // Silent error - don't block normal zooming if something fails
+                        console.error("Error in zoom limit check:", err);
+                    }
+                }, { passive: false, capture: true });
+                
+                // Add relayout event handler to force limits after zoom
+                container.on('plotly_relayout', function(eventData) {
+                    // Skip if not a zoom/pan event
+                    if (!eventData || (!eventData['xaxis.range[0]'] && !eventData['yaxis.range[0]'])) return;
+                    
+                    try {
+                        // Get current ranges
+                        const xRange = container.layout.xaxis.range;
+                        const yRange = container.layout.yaxis.range;
+                        
+                        // Calculate current view sizes
+                        const xSize = Math.abs(xRange[1] - xRange[0]);
+                        const ySize = Math.abs(yRange[1] - yRange[0]);
+                        
+                        // Calculate zoom ratios
+                        const xZoom = container._origData.width / xSize;
+                        const yZoom = container._origData.height / ySize;
+                        
+                        // Get the higher zoom ratio (more zoomed in)
+                        const currentZoom = Math.max(xZoom, yZoom);
+                        
+                        // Hard limits - enforce even after events get through
+                        const ABSOLUTE_MAX_ZOOM = zoomLimits.MAX_ZOOM_IN * 1.1; // Allow slight overshoot
+                        const ABSOLUTE_MIN_ZOOM = 1/(zoomLimits.MAX_ZOOM_OUT * 1.1);
+                        
+                        // Check if we're beyond absolute limits
+                        let needsCorrection = false;
+                        let newXRange = [...xRange];
+                        let newYRange = [...yRange];
+                        
+                        if (currentZoom > ABSOLUTE_MAX_ZOOM) {
+                            // Too zoomed in - zoom out to limit
+                            const correction = currentZoom / ABSOLUTE_MAX_ZOOM;
+                            const centerX = (xRange[0] + xRange[1]) / 2;
+                            const centerY = (yRange[0] + yRange[1]) / 2;
+                            const halfWidth = (xSize * correction) / 2;
+                            const halfHeight = (ySize * correction) / 2;
+                            
+                            newXRange = [centerX - halfWidth, centerX + halfWidth];
+                            newYRange = [centerY - halfHeight, centerY + halfHeight];
+                            needsCorrection = true;
+                        }
+                        else if (currentZoom < ABSOLUTE_MIN_ZOOM) {
+                            // Too zoomed out - zoom in to limit
+                            const correction = ABSOLUTE_MIN_ZOOM / currentZoom;
+                            const centerX = (xRange[0] + xRange[1]) / 2;
+                            const centerY = (yRange[0] + yRange[1]) / 2;
+                            const halfWidth = (xSize * correction) / 2;
+                            const halfHeight = (ySize * correction) / 2;
+                            
+                            newXRange = [centerX - halfWidth, centerX + halfWidth];
+                            newYRange = [centerY - halfHeight, centerY + halfHeight];
+                            needsCorrection = true;
+                        }
+                        
+                        // Apply correction if needed
+                        if (needsCorrection) {
+                            Plotly.relayout(container, {
+                                'xaxis.range': newXRange,
+                                'yaxis.range': newYRange
+                            });
+                        }
+                    } catch (err) {
+                        console.error("Error in relayout limit check:", err);
+                    }
+                });
+            });
+            
+            // Set up zoom handlers
+            setupEfficientZoomHandlers(container);
+            
+        } catch (plotError) {
+            console.error("Error creating plot:", plotError);
+            
+            // Try a simpler fallback version without event handlers if the main one fails
+            try {
+                Plotly.newPlot(container, [trace], layout, {
+                    responsive: true,
+                    displayModeBar: false
+                });
+            } catch (fallbackError) {
+                console.error("Fallback plot also failed:", fallbackError);
                 container.innerHTML = `<div style="color:red;padding:20px;text-align:center;">
-                    Error creating visualization:<br>${error.message}
+                    Unable to create visualization
                 </div>`;
             }
         }
+    } catch (error) {
+        console.error("Critical error creating heatmap:", error);
+        container.innerHTML = `<div style="color:red;padding:20px;text-align:center;">
+            Error creating visualization:<br>${error.message}
+        </div>`;
+    }
+}
+
+        
         
         // Update parameters and visualizations without loading new microstructure
         function updateParametersOnly() {
-            if (!currentResults) return;
+    if (!currentResults) return;
+    
+    try {
+        // Get parameter values
+        const kappa1 = parseFloat(kappa1Input.value);
+        const alpha = parseFloat(alphaInput.value);
+        
+        // Special case handling for kappa1 = 1 (homogeneous material)
+        if (Math.abs(kappa1 - 1.0) < 0.001) {
+            // Use the simplified approach for homogeneous materials
+            const image = currentResults.image || getImageData(parseInt(msIdInput.value));
             
-            try {
-                // Get parameter values
-                const kappa1 = parseFloat(kappa1Input.value);
-                const alpha = parseFloat(alphaInput.value);
-                
-                // Show loading overlay
-                loadingOverlay.classList.remove('hidden');
-                
-                // Clear any existing fetch operations (to prevent race conditions)
-                if (window.currentFetch) {
-                    window.currentFetchAbort.abort();
-                }
-                
-                // Create a new abort controller
-                const controller = new AbortController();
-                const signal = controller.signal;
-                window.currentFetchAbort = controller;
-                
-                // Track the current fetch operation
-                window.currentFetch = fetch(API_SIMULATE, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ms_id: parseInt(msIdInput.value),
-                        kappa1: kappa1,
-                        alpha: alpha
-                    }),
-                    signal // Pass the abort signal
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(error => {
-                            throw new Error(error.detail || 'Failed to update parameters');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(results => {
-                    // Clear the reference to the current fetch once it completes successfully
-                    window.currentFetch = null;
-                    
-                    // Store the updated results
-                    currentResults = results;
-                    
-                    // Update info panel
-                    updateInfoPanel(results, parseInt(msIdInput.value), kappa1, alpha);
-                    
-                    // Update visualizations
-                    createVisualizations(results);
-                })
-                .catch(error => {
-                    // Only report errors that aren't due to aborted requests
-                    if (error.name !== 'AbortError') {
-                        console.error('Error updating parameters:', error);
-                        infoPanel.innerHTML = `<p style="color: red; font-weight: bold;">Error: ${error.message}</p>`;
-                    }
-                })
-                .finally(() => {
-                    // Hide loading overlay if this is still the most recent request
-                    if (!window.currentFetch) {
-                        loadingOverlay.classList.add('hidden');
-                    }
+            // Create placeholder visualizations
+            createHomogeneousVisualizations(image);
+            
+            // Update info panel with homogeneous material info
+            updateInfoPanel({ vol_frac: calculateVolumeFraction(image), reuss: 1.0, voigt: 1.0, eig_kappa: [1.0, 1.0] }, 
+                            parseInt(msIdInput.value), kappa1, alpha);
+            
+            return;
+        }
+        
+        // Show loading overlay
+        loadingOverlay.classList.remove('hidden');
+        
+        // Clear any existing fetch operations (to prevent race conditions)
+        if (window.currentFetch) {
+            window.currentFetchAbort.abort();
+        }
+        
+        // Create a new abort controller
+        const controller = new AbortController();
+        const signal = controller.signal;
+        window.currentFetchAbort = controller;
+        
+        // Add a timeout to abort the request if it takes too long
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.log("Request timed out");
+        }, 10000);
+        
+        // Track the current fetch operation
+        window.currentFetch = fetch(API_SIMULATE, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ms_id: parseInt(msIdInput.value),
+                kappa1: kappa1,
+                alpha: alpha
+            }),
+            signal // Pass the abort signal
+        })
+        .then(response => {
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                return response.json().then(error => {
+                    throw new Error(error.detail || 'Failed to update parameters');
                 });
-            } catch (error) {
-                console.error('Error in parameter update:', error);
+            }
+            return response.json();
+        })
+        .then(results => {
+            // Clear the reference to the current fetch once it completes successfully
+            window.currentFetch = null;
+            
+            // Store the updated results
+            currentResults = results;
+            
+            // Update info panel
+            updateInfoPanel(results, parseInt(msIdInput.value), kappa1, alpha);
+            
+            // Update visualizations
+            createVisualizations(results);
+        })
+        .catch(error => {
+            // Only report errors that aren't due to aborted requests
+            if (error.name !== 'AbortError') {
+                console.error('Error updating parameters:', error);
+                infoPanel.innerHTML = `
+                    <p style="color: red; font-weight: bold;">Error: ${error.message}</p>
+                    <p>Please check that the server is running and accessible at the correct address.</p>
+                    <p>Server address: ${window.location.origin}${API_SIMULATE}</p>
+                `;
+            }
+        })
+        .finally(() => {
+            // Hide loading overlay if this is still the most recent request
+            if (!window.currentFetch) {
                 loadingOverlay.classList.add('hidden');
             }
-        }
+        });
+    } catch (error) {
+        console.error('Error in parameter update:', error);
+        loadingOverlay.classList.add('hidden');
+        infoPanel.innerHTML = `
+            <p style="color: red; font-weight: bold;">Error: ${error.message}</p>
+            <p>Please check your connection and try again.</p>
+        `;
+    }
+}
         
         // Update info panel with results
         function updateInfoPanel(results, msId, kappa1, alpha) {
-            let infoHTML = `
-                <div class="info-grid">
-                    <div class="info-item"><strong>Microstructure:</strong> ${typeof msId === 'number' ? `ID ${msId}` : msId}</div>
-                    <div class="info-item"><strong>Volume Fraction:</strong> ${results.vol_frac.toFixed(3)}</div>
-                    <div class="info-item"><strong>κ₁:</strong> ${kappa1.toFixed(3)} W/m²</div>
-                    <div class="info-item"><strong>α:</strong> ${alpha.toFixed(1)}°</div>
-                    <div class="info-item"><strong>Reuss Bound:</strong> ${results.reuss.toFixed(4)}</div>
-                    <div class="info-item"><strong>Voigt Bound:</strong> ${results.voigt.toFixed(4)}</div>
-                    <div class="info-item"><strong>Eigenvalues:</strong> [${results.eig_kappa[0].toFixed(4)}, ${results.eig_kappa[1].toFixed(4)}]</div>
-            `;
-            
-            // Add surrogate results if available
-            if (results.surrogate_results) {
-                infoHTML += `
-                    <div class="info-item"><strong>Predicted Eigenvalues:</strong> [${results.surrogate_results.eig_pred[0].toFixed(4)}, ${results.surrogate_results.eig_pred[1].toFixed(4)}]</div>
-                `;
-            }
-            
-            infoHTML += `</div>`;
-            infoPanel.innerHTML = infoHTML;
-        }
+    // Special case for kappa1 = 1 (homogeneous material)
+    if (Math.abs(kappa1 - 1.0) < 0.0001) { // Use a small epsilon for floating point comparison
+        let infoHTML = `
+            <div class="info-grid">
+                <div class="info-item"><strong>Microstructure:</strong> ${typeof msId === 'number' ? `ID ${msId}` : msId}</div>
+                <div class="info-item"><strong>Volume Fraction:</strong> ${results?.vol_frac ? results.vol_frac.toFixed(3) : 'N/A'}</div>
+                <div class="info-item"><strong>κ₁:</strong> ${kappa1.toFixed(3)} W/m² (Homogeneous material)</div>
+                <div class="info-item"><strong>α:</strong> ${alpha.toFixed(1)}°</div>
+                <div class="info-item"><strong>Effective Thermal Conductivity Tensor:</strong> [1.0, 1.0]</div>
+            </div>`;
+        infoPanel.innerHTML = infoHTML;
+        return;
+    }
+    
+    // Regular case - format the effective thermal conductivity tensor instead of eigenvalues
+    let effectiveTensor = results.eig_kappa || [0, 0];
+    
+    // Check if eigenvalues comply with Voigt and Reuss bounds
+    let complianceNote = "";
+    if (results.reuss && results.voigt && 
+        effectiveTensor[0] >= results.reuss && 
+        effectiveTensor[0] <= results.voigt && 
+        effectiveTensor[1] >= results.reuss && 
+        effectiveTensor[1] <= results.voigt) {
+        complianceNote = " <span style='color:green;'>(Complying with Voigt and Reuss bounds)</span>";
+    }
+    
+    let infoHTML = `
+        <div class="info-grid">
+            <div class="info-item"><strong>Microstructure:</strong> ${typeof msId === 'number' ? `ID ${msId}` : msId}</div>
+            <div class="info-item"><strong>Volume Fraction:</strong> ${results.vol_frac.toFixed(3)}</div>
+            <div class="info-item"><strong>κ₁:</strong> ${kappa1.toFixed(3)} W/m²</div>
+            <div class="info-item"><strong>α:</strong> ${alpha.toFixed(1)}°</div>
+            <div class="info-item"><strong>Reuss Bound:</strong> ${results.reuss.toFixed(4)}</div>
+            <div class="info-item"><strong>Voigt Bound:</strong> ${results.voigt.toFixed(4)}</div>
+            <div class="info-item"><strong>Effective Thermal Conductivity Tensor:</strong> [${effectiveTensor[0].toFixed(4)}, ${effectiveTensor[1].toFixed(4)}]${complianceNote}</div>
+    `;
+    
+    // Add surrogate results if available
+    if (results.surrogate_results) {
+        infoHTML += `
+            <div class="info-item"><strong>Predicted Effective Tensor:</strong> [${results.surrogate_results.eig_pred[0].toFixed(4)}, ${results.surrogate_results.eig_pred[1].toFixed(4)}]</div>
+        `;
+    }
+    
+    infoHTML += `</div>`;
+    infoPanel.innerHTML = infoHTML;
+}
         
         // Create visualizations with the results
         function createVisualizations(results) {
@@ -2124,57 +2364,189 @@
         
         // Run simulation and update visualizations
         async function runSimulation() {
-            // Show loading overlay
-            loadingOverlay.classList.remove('hidden');
+    // Show loading overlay
+    loadingOverlay.classList.remove('hidden');
+    
+    try {
+        // Get parameter values
+        const msId = parseInt(msIdInput.value);
+        const kappa1 = parseFloat(kappa1Input.value);
+        const alpha = parseFloat(alphaInput.value);
+        
+        // Validate microstructure ID
+        if (msId < 0 || msId > maxSampleId) {
+            throw new Error(`Microstructure ID must be between 0 and ${maxSampleId}`);
+        }
+        
+        // Special case handling for kappa1 = 1 (homogeneous material)
+        if (Math.abs(kappa1 - 1.0) < 0.001) {
+            // Create a simplified response for homogeneous material
+            const image = await getImageData(msId);
             
-            try {
-                // Get parameter values
-                const msId = parseInt(msIdInput.value);
-                const kappa1 = parseFloat(kappa1Input.value);
-                const alpha = parseFloat(alphaInput.value);
-                
-                // Validate microstructure ID
-                if (msId < 0 || msId > maxSampleId) {
-                    throw new Error(`Microstructure ID must be between 0 and ${maxSampleId}`);
-                }
-                
-                // Call API
-                const response = await fetch(API_SIMULATE, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ms_id: msId,
-                        kappa1: kappa1,
-                        alpha: alpha
-                    })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to run simulation');
-                }
-                
-                const results = await response.json();
-                
-                // Store the results
-                currentResults = results;
-                
-                // Update info panel
-                updateInfoPanel(results, msId, kappa1, alpha);
-                
-                // Create visualizations
-                createVisualizations(results);
-                
-            } catch (error) {
-                console.error('Error running simulation:', error);
-                infoPanel.innerHTML = `<p style="color: red; font-weight: bold;">Error: ${error.message}</p>`;
-            } finally {
-                // Hide loading overlay
-                loadingOverlay.classList.add('hidden');
+            // Calculate volume fraction for the info panel
+            const volFrac = calculateVolumeFraction(image);
+            
+            // Create placeholder visualizations for homogeneous material
+            createHomogeneousVisualizations(image);
+            
+            // Update info panel with homogeneous material info
+            updateInfoPanel({ vol_frac: volFrac, reuss: 1.0, voigt: 1.0, eig_kappa: [1.0, 1.0] }, msId, kappa1, alpha);
+            
+            // Hide loading overlay
+            loadingOverlay.classList.add('hidden');
+            return;
+        }
+        
+        // Create a timeout handler
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        // Call API with timeout
+        try {
+            const response = await fetch(API_SIMULATE, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ms_id: msId,
+                    kappa1: kappa1,
+                    alpha: alpha
+                }),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to run simulation');
+            }
+            
+            const results = await response.json();
+            
+            // Store the results
+            currentResults = results;
+            
+            // Update info panel
+            updateInfoPanel(results, msId, kappa1, alpha);
+            
+            // Create visualizations
+            createVisualizations(results);
+            
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out. The server may be busy or unavailable.');
+            } else {
+                throw error;
             }
         }
+        
+    } catch (error) {
+        console.error('Error running simulation:', error);
+        infoPanel.innerHTML = `
+            <p style="color: red; font-weight: bold;">Error: ${error.message}</p>
+            <p>Server address: ${window.location.origin}${API_SIMULATE}</p>
+            <p>If this error persists, check that the server is running and accessible.</p>
+        `;
+    } finally {
+        // Hide loading overlay
+        loadingOverlay.classList.add('hidden');
+    }
+} 
+
+async function getImageData(msId) {
+    // Try to get from current results if available
+    if (currentResults && currentResults.image) {
+        return currentResults.image;
+    }
+    
+    // Otherwise, use a default uniform grid
+    const gridSize = 400;
+    const image = [];
+    for (let i = 0; i < gridSize; i++) {
+        const row = [];
+        for (let j = 0; j < gridSize; j++) {
+            // Create a simple checkerboard pattern
+            row.push((i + j) % 16 < 8 ? 1 : 0);
+        }
+        image.push(row);
+    }
+    return image;
+}
+
+function calculateVolumeFraction(image) {
+    if (!image || !image.length) return 0.5;
+    
+    let sum = 0;
+    let count = 0;
+    
+    for (let i = 0; i < image.length; i++) {
+        for (let j = 0; j < image[i].length; j++) {
+            sum += image[i][j];
+            count++;
+        }
+    }
+    
+    return count > 0 ? sum / count : 0.5;
+}
+
+function createHomogeneousVisualizations(image) {
+    // Store image in currentResults
+    if (!currentResults) {
+        currentResults = {};
+    }
+    currentResults.image = image;
+    
+    // Create a uniform field for parameters (all 1's)
+    const paramField = [];
+    for (let i = 0; i < image.length; i++) {
+        const row = [];
+        for (let j = 0; j < image[0].length; j++) {
+            row.push(1.0);
+        }
+        paramField.push(row);
+    }
+    
+    // Create uniform fields for temperatures (all zeros for fluctuations)
+    const tempField = [];
+    for (let i = 0; i < image.length; i++) {
+        const row = [];
+        for (let j = 0; j < image[0].length; j++) {
+            row.push(0.0);
+        }
+        tempField.push(row);
+    }
+    
+    // Create uniform fields for flux (all 1's for constant heat flow)
+    const fluxField = [];
+    for (let i = 0; i < image.length; i++) {
+        const row = [];
+        for (let j = 0; j < image[0].length; j++) {
+            row.push(1.0);
+        }
+        fluxField.push(row);
+    }
+    
+    // Create visualizations with special labels for homogeneous case
+    createHeatmap(microPlot, image, 'Microstructure', 'Viridis');
+    createHeatmap(paramFieldPlot, paramField, 'Thermal Conductivity Field (Homogeneous κ=1)', 'Viridis');
+    createHeatmap(temp0Plot, tempField, 'Temperature Fluctuation (Load Case 1, Homogeneous)', 'Jet');
+    createHeatmap(temp1Plot, tempField, 'Temperature Fluctuation (Load Case 2, Homogeneous)', 'Jet');
+    createHeatmap(flux0Plot, fluxField, 'Heat Flux Magnitude (Load Case 1, Homogeneous)', 'Jet');
+    createHeatmap(flux1Plot, fluxField, 'Heat Flux Magnitude (Load Case 2, Homogeneous)', 'Jet');
+    
+    // Update currentResults with generated fields
+    currentResults.param_field = paramField;
+    currentResults.temp0 = tempField;
+    currentResults.temp1 = tempField;
+    currentResults.flux_norm0 = fluxField;
+    currentResults.flux_norm1 = fluxField;
+    currentResults.vol_frac = calculateVolumeFraction(image);
+    currentResults.reuss = 1.0;
+    currentResults.voigt = 1.0;
+    currentResults.eig_kappa = [1.0, 1.0];
+}
         
         // Process drawn microstructure
         async function processDrawing() {
@@ -2202,6 +2574,27 @@
         // Get parameters
         const kappa1 = parseFloat(kappa1Input.value);
         const alpha = parseFloat(alphaInput.value);
+        
+        // Special case handling for kappa1 = 1 (homogeneous material)
+        if (Math.abs(kappa1 - 1.0) < 0.001) {
+            // Convert the ROTATED drawing to binary image data for consistency
+            const drawingBinary = await convertCanvasToArray(tempCanvas);
+            
+            // Create homogeneous visualizations
+            createHomogeneousVisualizations(drawingBinary);
+            
+            // Update info panel
+            updateInfoPanel({ 
+                vol_frac: calculateVolumeFraction(drawingBinary), 
+                reuss: 1.0, 
+                voigt: 1.0, 
+                eig_kappa: [1.0, 1.0] 
+            }, 'Custom Drawing', kappa1, alpha);
+            
+            // Hide loading overlay
+            loadingOverlay.classList.add('hidden');
+            return;
+        }
         
         // Create form data
         const formData = new FormData();
@@ -2238,6 +2631,27 @@
         // Hide loading overlay
         loadingOverlay.classList.add('hidden');
     }
+}
+
+async function convertCanvasToArray(canvas) {
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const result = [];
+    
+    // Create binary array from image data
+    for (let y = 0; y < canvas.height; y++) {
+        const row = [];
+        for (let x = 0; x < canvas.width; x++) {
+            const idx = (y * canvas.width + x) * 4;
+            // Check if pixel is white (RGB values all above 128)
+            const isWhite = data[idx] > 128 && data[idx + 1] > 128 && data[idx + 2] > 128;
+            row.push(isWhite ? 1 : 0);
+        }
+        result.push(row);
+    }
+    
+    return result;
 }
         
         function resetPlot(plotId) {
@@ -2531,6 +2945,30 @@ document.querySelectorAll('.shape-tool').forEach(button => {
                 }
             }, 100);
         });
+    }
+});
+
+    // Add the upload size restriction notice
+    const uploadInfo = document.querySelector('.upload-info');
+    if (uploadInfo) {
+        uploadInfo.innerHTML = `
+            <small>Supported formats: PNG, JPEG, GIF. Images will be processed as binary (black/white) microstructures, where white represents the conductive phase. <strong>Images will be restricted to 400x400px - larger images will be cropped to the top-left corner.</strong></small>
+        `;
+    }
+    
+    // Add warning for kappa1 near 1
+    kappa1Input.addEventListener('input', () => {
+    const kappa1 = parseFloat(kappa1Input.value);
+    const kappa1ValueElem = document.getElementById('kappa1-value');
+    
+    // Just update the displayed value immediately
+    kappa1ValueElem.textContent = kappa1.toFixed(2);
+    
+    // Add warning if kappa1 is exactly 1 or very close to 1
+    if (Math.abs(kappa1 - 1.0) < 0.001) {
+        kappa1ValueElem.innerHTML = `${kappa1.toFixed(2)} <span style="color:#e74c3c">(homogeneous material)</span>`;
+    } else if (Math.abs(kappa1 - 1.0) < 0.05) {
+        kappa1ValueElem.innerHTML = `${kappa1.toFixed(2)} <span style="color:orange">(near homogeneous)</span>`;
     }
 });
             

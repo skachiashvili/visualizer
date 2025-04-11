@@ -4,3 +4,4 @@ matplotlib>=3.10.0
 ipywidgets>=8.1.5
 jupyterlab>=4.3.4
 ipympl>=0.9.6
+scipy
