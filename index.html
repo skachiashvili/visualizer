@@ -669,6 +669,67 @@
                 width: 100%;
             }
         }
+         /* Color buttons styling */
+    .color-buttons {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-left: 10px;
+        padding: 5px;
+        background-color: rgba(0,0,0,0.05);
+        border-radius: 4px;
+    }
+    
+    .color-button {
+        padding: 8px 12px;
+        margin: 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+        background-color: #7f8c8d;
+        color: white;
+    }
+    
+    .color-button.color-active {
+        border: 2px solid #3498db;
+        box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    }
+    
+    #draw-white.color-active {
+        background-color: #ffffff;
+        color: #333333;
+    }
+    
+    #draw-black.color-active {
+        background-color: #333333;
+        color: #ffffff;
+    }
+    
+    /* Canvas operation tool styling */
+    .canvas-op-tool {
+        padding: 8px 12px;
+        margin: 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+        background-color: #7f8c8d;
+        color: white;
+    }
+    
+    .canvas-op-tool:hover {
+        background-color: #6c7a7a;
+    }
+    .drawing-tool.color-active {
+    border: 2px solid #3498db !important;
+    background-color: #ffffff;
+    color: #000000;
+}
     </style>
 </head>
 <body>
@@ -750,78 +811,92 @@
                 <div class="drawing-container">
                     <h2>Draw Custom Microstructure</h2>
                     
-                    <div class="drawing-toolbar">
-                        <div class="toolbar-section">
-                            <div class="toolbar-header" onclick="toggleToolbarSection(this)">
-                                <h4>Main Tools</h4>
-                                <span class="toggle-icon">▼</span>
-                            </div>
-                            <div class="toolbar-content">
-                                <div class="toolbar-buttons">
-                                    <button class="drawing-tool active" id="draw-white" title="Draw with white (conductive phase)">White <span class="keyboard-shortcut">W</span></button>
-                                    <button class="drawing-tool" id="draw-black" title="Draw with black (base phase)">Black <span class="keyboard-shortcut">B</span></button>
-                                    <button class="drawing-tool" id="draw-eraser" title="Erase to black">Eraser <span class="keyboard-shortcut">E</span></button>
-                                    <div class="brush-size">
-                                        <label for="brush-size">Size:</label>
-                                        <input type="range" id="brush-size" min="1" max="50" value="10" style="width: 100px">
-                                        <span id="brush-size-value">10px</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="toolbar-section">
-                            <div class="toolbar-header" onclick="toggleToolbarSection(this)">
-                                <h4>Shapes & Patterns</h4>
-                                <span class="toggle-icon">▼</span>
-                            </div>
-                            <div class="toolbar-content">
-                                <div class="toolbar-buttons">
-                                    <button class="shape-tool" id="draw-circle" title="Draw a white circle">Circle</button>
-                                    <button class="shape-tool" id="draw-rectangle" title="Draw a white rectangle">Rectangle</button>
-                                    <button class="shape-tool" id="draw-triangle" title="Draw a white triangle">Triangle</button>
-                                    <button class="shape-tool" id="draw-line" title="Draw a straight line">Line</button>
-                                    <button class="shape-tool" id="draw-grid" title="Generate a grid pattern">Grid</button>
-                                    <button class="shape-tool" id="draw-checkerboard" title="Generate a checkerboard pattern">Checkerboard</button>
-                                    <button class="shape-tool" id="draw-random" title="Generate random particles">Random</button>
-                                    <button class="shape-tool" id="draw-voronoi" title="Generate a cellular pattern">Cellular</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="toolbar-section">
-                            <div class="toolbar-header" onclick="toggleToolbarSection(this)">
-                                <h4>Canvas Operations</h4>
-                                <span class="toggle-icon">▼</span>
-                            </div>
-                            <div class="toolbar-content">
-                                <div class="toolbar-buttons">
-                                    <button class="drawing-tool" id="undo-btn" disabled title="Undo last action">Undo <span class="keyboard-shortcut">Ctrl+Z</span></button>
-                                    <button class="drawing-tool" id="redo-btn" disabled title="Redo last undone action">Redo <span class="keyboard-shortcut">Ctrl+Y</span></button>
-                                    <button class="drawing-tool tool-important" id="clear-canvas" title="Clear the entire canvas to black">Clear</button>
-                                    <button class="drawing-tool" id="fill-white" title="Fill the entire canvas with white">Fill White</button>
-                                    <button class="drawing-tool" id="fill-black" title="Fill the entire canvas with black">Fill Black</button>
-                                    <button class="drawing-tool" id="invert-colors" title="Invert black and white">Invert</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="toolbar-section">
-                            <div class="toolbar-header" onclick="toggleToolbarSection(this)">
-                                <h4>Save & Load</h4>
-                                <span class="toggle-icon">▼</span>
-                            </div>
-                            <div class="toolbar-content">
-                                <div class="toolbar-buttons">
-                                    <button class="drawing-tool tool-action" id="save-drawing-btn" title="Save this drawing locally">Save</button>
-                                    <select id="load-drawing-select" title="Load a saved drawing">
-                                        <option value="">-- Load Drawing --</option>
-                                    </select>
-                                    <button class="drawing-tool" id="delete-drawing-btn" title="Delete the selected saved drawing">Delete</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<!-- Updated HTML structure to better separate tools, colors, and canvas operations -->
+<div class="drawing-toolbar">
+    <div class="toolbar-section">
+        <div class="toolbar-header" onclick="toggleToolbarSection(this)">
+            <h4>Drawing Tools</h4>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="toolbar-content">
+            <div class="toolbar-buttons">
+                <!-- Drawing tools -->
+                <button class="drawing-tool active" id="draw-pencil" title="Draw freehand">Pencil <span class="keyboard-shortcut">P</span></button>
+                <button class="drawing-tool" id="draw-line" title="Draw a straight line">Line <span class="keyboard-shortcut">L</span></button>
+                <button class="drawing-tool" id="draw-eraser" title="Erase to black">Eraser <span class="keyboard-shortcut">E</span></button>
+                
+                <!-- Color selector - separate div for color buttons -->
+                <div class="color-buttons">
+                    <label>Color:</label>
+                    <button class="color-button color-active" id="draw-white" title="Set color to white">White <span class="keyboard-shortcut">W</span></button>
+                    <button class="color-button" id="draw-black" title="Set color to black">Black <span class="keyboard-shortcut">B</span></button>
+                </div>
+                
+                <!-- Brush size control -->
+                <div class="brush-size">
+                    <label for="brush-size">Size:</label>
+                    <input type="range" id="brush-size" min="1" max="50" value="10" style="width: 100px">
+                    <span id="brush-size-value">10px</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Canvas operations section - keep separate from drawing tools -->
+    <div class="toolbar-section">
+        <div class="toolbar-header" onclick="toggleToolbarSection(this)">
+            <h4>Canvas Operations</h4>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="toolbar-content">
+            <div class="toolbar-buttons">
+                <button class="canvas-op-tool" id="undo-btn" disabled title="Undo last action">Undo <span class="keyboard-shortcut">Ctrl+Z</span></button>
+                <button class="canvas-op-tool" id="redo-btn" disabled title="Redo last undone action">Redo <span class="keyboard-shortcut">Ctrl+Y</span></button>
+                <button class="canvas-op-tool" id="clear-canvas" title="Clear the entire canvas to black">Clear</button>
+                <button class="canvas-op-tool" id="fill-white" title="Fill the entire canvas with white">Fill White</button>
+                <button class="canvas-op-tool" id="fill-black" title="Fill the entire canvas with black">Fill Black</button>
+                <button class="canvas-op-tool" id="invert-colors" title="Invert black and white">Invert</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Shapes & patterns section -->
+    <div class="toolbar-section">
+        <div class="toolbar-header" onclick="toggleToolbarSection(this)">
+            <h4>Shapes & Patterns</h4>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="toolbar-content">
+            <div class="toolbar-buttons">
+                <button class="shape-tool" id="draw-circle" title="Draw a white circle">Circle</button>
+                <button class="shape-tool" id="draw-rectangle" title="Draw a white rectangle">Rectangle</button>
+                <button class="shape-tool" id="draw-triangle" title="Draw a white triangle">Triangle</button>
+                <button class="shape-tool" id="draw-grid" title="Generate a grid pattern">Grid</button>
+                <button class="shape-tool" id="draw-checkerboard" title="Generate a checkerboard pattern">Checkerboard</button>
+                <button class="shape-tool" id="draw-random" title="Generate random particles">Random</button>
+                <button class="shape-tool" id="draw-voronoi" title="Generate a cellular pattern">Cellular</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Save & load section -->
+    <div class="toolbar-section">
+        <div class="toolbar-header" onclick="toggleToolbarSection(this)">
+            <h4>Save & Load</h4>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="toolbar-content">
+            <div class="toolbar-buttons">
+                <button class="canvas-op-tool" id="save-drawing-btn" title="Save this drawing locally">Save</button>
+                <select id="load-drawing-select" title="Load a saved drawing">
+                    <option value="">-- Load Drawing --</option>
+                </select>
+                <button class="canvas-op-tool" id="delete-drawing-btn" title="Delete the selected saved drawing">Delete</button>
+                <button class="canvas-op-tool" id="download-drawing-btn" title="Download this drawing as a PNG image">Download Image</button>
+            </div>
+        </div>
+    </div>
+</div>
                     
                     <div class="drawing-actions">
                         <div id="drawing-canvas-container">
@@ -923,6 +998,28 @@
     </div>
     
     <script>
+// Download the current drawing as a PNG image
+function downloadDrawing() {
+    // Get the canvas
+    const canvas = document.getElementById('drawing-canvas');
+    
+    // Create a temporary link element for downloading
+    const link = document.createElement('a');
+    
+    // Set filename with timestamp for uniqueness
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+    const filename = `microstructure-drawing-${timestamp}.png`;
+    
+    // Get canvas content as PNG image data URL
+    link.href = canvas.toDataURL('image/png');
+    link.download = filename;
+    
+    // Simulate click to trigger download (compatible with most browsers)
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
         // DOM Elements
         const msIdInput = document.getElementById('ms-id');
         const kappa1Input = document.getElementById('kappa1');
@@ -1122,8 +1219,8 @@
             }
         }
 
-        // Additional shape tools
-        function drawLine() {
+// Fixed drawLine function that correctly respects canvas operations
+function drawLine() {
     let startX, startY;
     let isDrawingLine = false;
     let tempCanvas = document.createElement('canvas');
@@ -1131,10 +1228,23 @@
     tempCanvas.height = canvas.height;
     let tempCtx = tempCanvas.getContext('2d');
     
-    // Copy current canvas to temp
-    tempCtx.drawImage(canvas, 0, 0);
+    // Copy current canvas to temp - CRITICAL FIX: This needs to be redone whenever the line tool is used
+    // NOT just once when initialized
+    function updateTempCanvas() {
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(canvas, 0, 0);
+    }
+    
+    // Call immediately to set initial state
+    updateTempCanvas();
     
     function startLine(e) {
+        // CRITICAL FIX: Update the temp canvas when starting a new line
+        // This ensures we're always working with the latest canvas state
+        updateTempCanvas();
+        
         isDrawingLine = true;
         const rect = canvas.getBoundingClientRect();
         startX = e.clientX - rect.left;
@@ -1143,7 +1253,7 @@
         // Add event listeners for drawing line
         canvas.addEventListener('mousemove', drawingLine);
         canvas.addEventListener('mouseup', endLine);
-        canvas.addEventListener('mouseout', endLine); // Also end line when mouse leaves canvas
+        canvas.addEventListener('mouseout', endLine);
     }
     
     function drawingLine(e) {
@@ -1178,15 +1288,14 @@
         // Save the state after drawing the line
         saveCanvasState();
         
-        // Auto-restore normal drawing mode when line is complete
+        // Auto-restore normal drawing mode
         restoreNormalDrawing();
         
-        // Reset active tool to previous drawing tool
-        if (drawColor === '#FFFFFF') {
-            setActiveDrawingTool(drawWhiteBtn);
-        } else {
-            setActiveDrawingTool(drawBlackBtn);
-        }
+        // Keep the line tool active - don't switch to pencil or color tool
+        setActiveDrawingTool(document.getElementById('draw-line'));
+        
+        // Reset to line drawing mode for the next line
+        currentDrawingMode = drawLine();
     }
     
     // Override normal drawing behavior temporarily
@@ -1209,13 +1318,16 @@
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
-        
-        // Clear the current drawing mode reference
-        currentDrawingMode = null;
     }
     
-    // Return the cleanup function to be called when another tool is selected
-    return restoreNormalDrawing;
+    // Return a cleanup function that includes nullifying the temp canvas
+    return function() {
+        restoreNormalDrawing();
+        // CRITICAL FIX: Clear references to the temporary canvas
+        tempCanvas = null;
+        tempCtx = null;
+        currentDrawingMode = null;
+    };
 }
 
         // Draw a triangle shape
@@ -1309,101 +1421,309 @@
         }
 
         // Keyboard shortcuts
-        function setupKeyboardShortcuts() {
-            document.addEventListener('keydown', function(e) {
-                // Only apply shortcuts when draw tab is active
-                if (currentTab !== 'draw') return;
-                
-                // Ctrl+Z for undo
-                if (e.ctrlKey && e.key === 'z') {
-                    e.preventDefault();
-                    undoCanvas();
-                }
-                
-                // Ctrl+Y for redo
-                if (e.ctrlKey && e.key === 'y') {
-                    e.preventDefault();
-                    redoCanvas();
-                }
-                
-                // 'B' for black drawing tool
-                if (e.key === 'b' && !e.ctrlKey && !e.altKey) {
-                    e.preventDefault();
-                    setActiveDrawingTool(drawBlackBtn);
-                    drawColor = '#000000';
-                }
-                
-                // 'W' for white drawing tool
-                if (e.key === 'w' && !e.ctrlKey && !e.altKey) {
-                    e.preventDefault();
-                    setActiveDrawingTool(drawWhiteBtn);
-                    drawColor = '#FFFFFF';
-                }
-                
-                // 'E' for eraser
-                if (e.key === 'e' && !e.ctrlKey && !e.altKey) {
-                    e.preventDefault();
-                    setActiveDrawingTool(eraserBtn);
-                }
-                
-                // Escape to cancel current action
-                if (e.key === 'Escape') {
-                    // If we're in a special drawing mode, revert to normal
-                    if (currentDrawingMode) {
-                        currentDrawingMode();
-                        currentDrawingMode = null;
-                    }
-                }
-            });
+// Updated keyboard shortcuts for better tool and color separation
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Only apply shortcuts when draw tab is active
+        if (currentTab !== 'draw') return;
+        
+        // Get tool and color buttons
+        const pencilBtn = document.getElementById('draw-pencil');
+        const lineBtn = document.getElementById('draw-line');
+        const eraserBtn = document.getElementById('draw-eraser');
+        const whiteBtn = document.getElementById('draw-white');
+        const blackBtn = document.getElementById('draw-black');
+        
+        // Ctrl+Z for undo
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            undoCanvas();
         }
+        
+        // Ctrl+Y for redo
+        if (e.ctrlKey && e.key === 'y') {
+            e.preventDefault();
+            redoCanvas();
+        }
+        
+        // 'P' for pencil tool
+        if (e.key === 'p' && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            // Clear any special drawing mode
+            if (currentDrawingMode) {
+                currentDrawingMode();
+                currentDrawingMode = null;
+            }
+            // Activate pencil tool - color remains unchanged
+            setActiveDrawingTool(pencilBtn);
+        }
+        
+        // 'L' for line tool
+        if (e.key === 'l' && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            // Clean up any existing drawing mode
+            if (currentDrawingMode) {
+                currentDrawingMode();
+            }
+            // Set up line drawing mode - color remains unchanged
+            currentDrawingMode = drawLine();
+            // Update UI to show line tool as active
+            setActiveDrawingTool(lineBtn);
+        }
+        
+        // 'E' for eraser
+        if (e.key === 'e' && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            if (currentDrawingMode) {
+                currentDrawingMode();
+                currentDrawingMode = null;
+            }
+            setActiveDrawingTool(eraserBtn);
+            // Eraser always uses black
+            drawColor = '#000000';
+        }
+        
+        // 'W' for white color - only changes color, not tool
+        if (e.key === 'w' && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            drawColor = '#FFFFFF';
+            // Update color button appearance
+            whiteBtn.classList.add('color-active');
+            blackBtn.classList.remove('color-active');
+        }
+        
+        // 'B' for black color - only changes color, not tool
+        if (e.key === 'b' && !e.ctrlKey && !e.altKey) {
+            e.preventDefault();
+            drawColor = '#000000';
+            // Update color button appearance
+            blackBtn.classList.add('color-active');
+            whiteBtn.classList.remove('color-active');
+        }
+        
+        // Escape to cancel current action
+        if (e.key === 'Escape') {
+            // If we're in a special drawing mode, revert to pencil
+            if (currentDrawingMode) {
+                currentDrawingMode();
+                currentDrawingMode = null;
+                // Default back to pencil (color stays the same)
+                setActiveDrawingTool(pencilBtn);
+            }
+        }
+    });
+}
 
         // Variable to track special drawing modes
         let currentDrawingMode = null;
 
         // Modified function to initialize drawing tools
         function initializeDrawingTools() {
-            // Initialize undo/redo buttons
-            document.getElementById('undo-btn').addEventListener('click', undoCanvas);
-            document.getElementById('redo-btn').addEventListener('click', redoCanvas);
-            document.getElementById('undo-btn').disabled = true;
-            
-            // Initialize save/load
-            document.getElementById('save-drawing-btn').addEventListener('click', saveDrawing);
-            document.getElementById('load-drawing-select').addEventListener('change', function() {
-                if (this.value) {
-                    loadDrawing(this.value);
-                    this.selectedIndex = 0; // Reset dropdown
-                }
-            });
-            document.getElementById('delete-drawing-btn').addEventListener('click', deleteDrawing);
-            updateDrawingsList();
-            
-            // Initialize special drawing modes
-            document.getElementById('draw-line').addEventListener('click', function() {
-                if (currentDrawingMode) {
-                    currentDrawingMode();
-                }
-                currentDrawingMode = drawLine();
-            });
-            
-            document.getElementById('draw-triangle').addEventListener('click', function() {
-                drawTriangle();
-            });
-            
-            document.getElementById('draw-checkerboard').addEventListener('click', function() {
-                drawCheckerboard();
-            });
-            
-            document.getElementById('draw-voronoi').addEventListener('click', function() {
-                drawVoronoi();
-            });
-            
-            // Set up keyboard shortcuts
-            setupKeyboardShortcuts();
-            
-            // Save initial canvas state
-            saveCanvasState();
+    // Initialize undo/redo buttons
+    document.getElementById('undo-btn').addEventListener('click', undoCanvas);
+    document.getElementById('redo-btn').addEventListener('click', redoCanvas);
+    document.getElementById('undo-btn').disabled = true;
+    
+    // Initialize save/load
+    document.getElementById('save-drawing-btn').addEventListener('click', saveDrawing);
+    document.getElementById('load-drawing-select').addEventListener('change', function() {
+        if (this.value) {
+            loadDrawing(this.value);
+            this.selectedIndex = 0; // Reset dropdown
         }
+    });
+    document.getElementById('delete-drawing-btn').addEventListener('click', deleteDrawing);
+    document.getElementById('download-drawing-btn').addEventListener('click', downloadDrawing);
+    updateDrawingsList();
+    
+    // Define all tool buttons
+    const pencilBtn = document.getElementById('draw-pencil');
+    const whiteBtn = document.getElementById('draw-white');
+    const blackBtn = document.getElementById('draw-black');
+    const eraserBtn = document.getElementById('draw-eraser');
+    const lineBtn = document.getElementById('draw-line');
+    const clearCanvasBtn = document.getElementById('clear-canvas');
+    const fillWhiteBtn = document.getElementById('fill-white');
+    const fillBlackBtn = document.getElementById('fill-black');
+    const invertColorsBtn = document.getElementById('invert-colors');
+    
+    // Initialize the pencil tool
+    pencilBtn.addEventListener('click', function() {
+        if (currentDrawingMode) {
+            currentDrawingMode();
+            currentDrawingMode = null;
+        }
+        setActiveDrawingTool(this);
+        // Keep current color
+    });
+    
+    // Initialize white color button (now just sets color, doesn't change tool)
+    whiteBtn.addEventListener('click', function() {
+        drawColor = '#FFFFFF';
+        // Highlight this color button
+        whiteBtn.classList.add('color-active');
+        blackBtn.classList.remove('color-active');
+    });
+    
+    // Initialize black color button (now just sets color, doesn't change tool)
+    blackBtn.addEventListener('click', function() {
+        drawColor = '#000000';
+        // Highlight this color button
+        blackBtn.classList.add('color-active');
+        whiteBtn.classList.remove('color-active');
+    });
+    
+    // Initialize eraser
+    eraserBtn.addEventListener('click', function() {
+        if (currentDrawingMode) {
+            currentDrawingMode();
+            currentDrawingMode = null;
+        }
+        setActiveDrawingTool(this);
+        // Eraser always uses black
+        drawColor = '#000000';
+    });
+    
+    // Initialize line tool
+    lineBtn.addEventListener('click', function() {
+        // Clear any existing drawing mode
+        if (currentDrawingMode) {
+            currentDrawingMode();
+        }
+        // Make this tool active
+        setActiveDrawingTool(this);
+        // Initialize line drawing mode
+        currentDrawingMode = drawLine();
+    });
+    
+    // Initialize canvas operation buttons
+    
+    // Clear the canvas
+    clearCanvasBtn.addEventListener('click', () => {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        saveCanvasState();
+    });
+    
+    // Fill the canvas with white
+    fillWhiteBtn.addEventListener('click', () => {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        saveCanvasState();
+    });
+    
+    // Fill the canvas with black
+    fillBlackBtn.addEventListener('click', () => {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        saveCanvasState();
+    });
+    
+    // Invert canvas colors
+    invertColorsBtn.addEventListener('click', () => {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+            data[i] = 255 - data[i];       // Red
+            data[i + 1] = 255 - data[i + 1]; // Green
+            data[i + 2] = 255 - data[i + 2]; // Blue
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        saveCanvasState();
+    });
+    
+    // Initialize shape tools
+    document.getElementById('draw-circle').addEventListener('click', function() {
+        // Draw a white circle in the center
+        const radius = Math.min(canvas.width, canvas.height) / 4;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        saveCanvasState();
+    });
+    
+    document.getElementById('draw-rectangle').addEventListener('click', function() {
+        // Draw a white rectangle in the center
+        const width = canvas.width / 2;
+        const height = canvas.height / 2;
+        const x = (canvas.width - width) / 2;
+        const y = (canvas.height - height) / 2;
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(x, y, width, height);
+        saveCanvasState();
+    });
+    
+    document.getElementById('draw-triangle').addEventListener('click', function() {
+        drawTriangle();
+    });
+    
+    document.getElementById('draw-grid').addEventListener('click', function() {
+        // Draw a grid pattern
+        const gridSize = 8; // Number of cells in each direction
+        const cellWidth = canvas.width / gridSize;
+        const cellHeight = canvas.height / gridSize;
+        
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#FFFFFF';
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                // Alternating pattern
+                if ((i + j) % 2 === 0) {
+                    ctx.fillRect(i * cellWidth, j * cellHeight, cellWidth, cellHeight);
+                }
+            }
+        }
+        saveCanvasState();
+    });
+    
+    document.getElementById('draw-checkerboard').addEventListener('click', function() {
+        drawCheckerboard();
+    });
+    
+    document.getElementById('draw-random').addEventListener('click', function() {
+        // Draw random white particles
+        const numParticles = 100;
+        const maxRadius = 20;
+        
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#FFFFFF';
+        for (let i = 0; i < numParticles; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = 5 + Math.random() * maxRadius;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        saveCanvasState();
+    });
+    
+    document.getElementById('draw-voronoi').addEventListener('click', function() {
+        drawVoronoi();
+    });
+    
+    // Set up keyboard shortcuts
+    setupKeyboardShortcuts();
+    
+    // Default to white color
+    drawColor = '#FFFFFF';
+    whiteBtn.classList.add('color-active');
+    
+    // Save initial canvas state
+    saveCanvasState();
+}
 
         // Modified stopDrawing function to save state history
         function stopDrawing() {
