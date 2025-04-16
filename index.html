@@ -730,11 +730,70 @@
     background-color: #ffffff;
     color: #000000;
 }
+.acknowledgements-panel {
+    background-color: #f0f7ff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #3498db;
+}
+
+.acknowledgements-panel h3 {
+    color: #2980b9;
+    margin-bottom: 10px;
+    font-size: 1.3rem;
+}
+
+.acknowledgements-panel h4 {
+    color: #2980b9;
+    margin: 15px 0 10px 0;
+    font-size: 1.1rem;
+}
+
+.acknowledgements-panel p {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.acknowledgements-panel a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.acknowledgements-panel a:hover {
+    text-decoration: underline;
+}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Microstructure Thermal Simulation</h1>
+        <!-- NFDI Acknowledgements Section -->
+<div class="acknowledgements-panel" id="acknowledgements-panel">
+    <h3>NFDI demonstrator by Data Analytics in Engineering</h3>
+    
+    <p><strong>Authors:</strong> Julius Herb (<a href="mailto:herb@mib.uni-stuttgart.de">herb@mib.uni-stuttgart.de</a>), 
+    Sanath Keshav (<a href="mailto:keshav@mib.uni-stuttgart.de">keshav@mib.uni-stuttgart.de</a>), 
+    Felix Fritzen (<a href="mailto:fritzen@mib.uni-stuttgart.de">fritzen@mib.uni-stuttgart.de</a>)</p>
+    
+    <p><strong>Affiliation:</strong> Heisenberg Professorship Data Analytics in Engineering, 
+    Institute of Applied Mechanics, University of Stuttgart | Universitätsstr. 32, 70569 Stuttgart | 
+    <a href="https://www.mib.uni-stuttgart.de/dae" target="_blank">https://www.mib.uni-stuttgart.de/dae</a></p>
+    
+    <h4>Funding acknowledgment</h4>
+    <p>Contributions by Felix Fritzen are partially funded by Deutsche Forschungsgemeinschaft 
+    (DFG, German Research Foundation) under Germany's Excellence Strategy - EXC 2075 – 390740016. 
+    Felix Fritzen is funded by Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) 
+    within the Heisenberg program DFG-FR2702/8 - 406068690 and DFG-FR2702/10 - 517847245.</p>
+    
+    <p>Contributions of Julius Herb are partially funded by the Ministry of Science, Research and 
+    the Arts (MWK) Baden-Württemberg, Germany, within the Artificial Intelligence Software Academy (AISA).</p>
+    
+    <p>The authors acknowledge the support by the Stuttgart Center for Simulation Science (SimTech).</p>
+    
+    <div class="button-container">
+        <button id="hide-acknowledgements" style="background-color: #3498db; padding: 8px 16px; margin-top: 10px;">Hide Acknowledgements</button>
+    </div>
+</div>
         
         <div class="tutorial-panel" id="tutorial-panel">
             <h3>How to Use This Tool</h3>
@@ -760,7 +819,7 @@
             <div class="controls">
                 <div class="control-group">
                     <label for="kappa1" class="tooltip">
-                        κ₁ [W/m²]:
+                        κ₁ [W/m²]: conductivity of the 'yellow' phase [W/(m K)] ('blue' phase: 1 W/(m K))
                         <span class="tooltiptext">Thermal conductivity ratio between phases. Higher values = greater conductivity difference.</span>
                     </label>
                     <input type="range" id="kappa1" min="0.1" max="10" step="0.1" value="0.2">
@@ -769,7 +828,7 @@
                 
                 <div class="control-group">
                     <label for="alpha" class="tooltip">
-                        α [°]:
+                        α [°]: angle of the load vector (=temperature gradient) \alpha [degree]
                         <span class="tooltiptext">Direction of thermal gradient. Changes the direction of heat flow.</span>
                     </label>
                     <input type="range" id="alpha" min="0" max="90" step="1" value="0">
@@ -998,6 +1057,7 @@
     </div>
     
     <script>
+        
 // Download the current drawing as a PNG image
 function downloadDrawing() {
     // Get the canvas
@@ -1967,6 +2027,16 @@ function setupKeyboardShortcuts() {
         hideTutorialBtn.addEventListener('click', () => {
             tutorialPanel.style.display = 'none';
         });
+        document.addEventListener('DOMContentLoaded', function() {
+        const hideAcknowledgementsBtn = document.getElementById('hide-acknowledgements');
+        const acknowledgementsPanel = document.getElementById('acknowledgements-panel');
+        
+        if (hideAcknowledgementsBtn && acknowledgementsPanel) {
+            hideAcknowledgementsBtn.addEventListener('click', () => {
+                acknowledgementsPanel.style.display = 'none';
+            });
+        }
+    });
         
         // Debounce function to limit frequent updates
         function debounce(func, wait) {
@@ -2219,8 +2289,8 @@ function setupKeyboardShortcuts() {
             }, { passive: true }); // Use passive listener for better performance
         }
         
-        // Create a heatmap visualization - IMPROVED VERSION
-        function createHeatmap(container, data, title, colorscale = 'Jet', options = {}) {
+// Updated createHeatmap function to properly handle zmin and zmax options
+function createHeatmap(container, data, title, colorscale = 'Jet', options = {}) {
     try {
         // Remove any existing plots to prevent memory leaks
         Plotly.purge(container);
@@ -2241,6 +2311,15 @@ function setupKeyboardShortcuts() {
             colorscale: colorscale,
             showscale: true
         };
+        
+        // Apply custom zmin/zmax if specified in options
+        if (options.zmin !== undefined) {
+            trace.zmin = options.zmin;
+        }
+        
+        if (options.zmax !== undefined) {
+            trace.zmax = options.zmax;
+        }
         
         // Set up layout with default options
         const layout = {
@@ -2290,176 +2369,11 @@ function setupKeyboardShortcuts() {
         // Use a try-catch for the plot creation
         try {
             Plotly.newPlot(container, [trace], layout, config).then(() => {
-                // After plot is created, set up enhanced zoom limits with touchpad support
-                const zoomLimits = {
-                    MAX_ZOOM_IN: 5,     // 5x zoom in limit
-                    MAX_ZOOM_OUT: 5,    // 5x zoom out limit
-                    TOUCHPAD_SENSITIVITY_ADJUST: 0.2  // Reduce touchpad sensitivity (lower = stricter)
-                };
-                
-                // Store original dimensions for zoom calculations
+                // Store original dimensions for reference (not for zoom restrictions)
                 container._origData = {
                     width: transposedData[0].length,
                     height: transposedData.length
                 };
-                
-                // Track the last known zoom level
-                container._currentZoom = 1;
-                
-                // Track time between wheel events to detect rapid touchpad scrolling
-                container._lastWheelTime = 0;
-                container._wheelEventCount = 0;
-                
-                // Track if we're in a touchpad rapid zoom sequence
-                container._isTouchpadRapidZoom = false;
-                
-                // Add wheel event handler to limit zoom
-                container.addEventListener('wheel', function(e) {
-                    // Skip if we don't have layout or origData
-                    if (!container.layout || !container.layout.xaxis || 
-                        !container.layout.yaxis || !container._origData) {
-                        return;
-                    }
-                    
-                    try {
-                        // Get current ranges
-                        const xRange = container.layout.xaxis.range;
-                        const yRange = container.layout.yaxis.range;
-                        
-                        // Calculate current view sizes
-                        const xSize = Math.abs(xRange[1] - xRange[0]);
-                        const ySize = Math.abs(yRange[1] - yRange[0]);
-                        
-                        // Calculate zoom ratios
-                        const xZoom = container._origData.width / xSize;
-                        const yZoom = container._origData.height / ySize;
-                        
-                        // Get the higher zoom ratio (more zoomed in)
-                        const currentZoom = Math.max(xZoom, yZoom);
-                        
-                        // Update the stored zoom level
-                        container._currentZoom = currentZoom;
-                        
-                        // Check if zooming in or out
-                        const zoomingIn = e.deltaY < 0;
-                        const zoomingOut = e.deltaY > 0;
-                        
-                        // Touchpad detection - check for rapid successive events
-                        const now = Date.now();
-                        const timeSinceLastWheel = now - (container._lastWheelTime || 0);
-                        container._lastWheelTime = now;
-                        
-                        // Reset counter if it's been a while since last event
-                        if (timeSinceLastWheel > 100) {
-                            container._wheelEventCount = 0;
-                            container._isTouchpadRapidZoom = false;
-                        }
-                        
-                        // Increment wheel event counter
-                        container._wheelEventCount++;
-                        
-                        // Detect touchpad by checking for small deltas and rapid events
-                        const isTouchpadLike = (
-                            Math.abs(e.deltaY) < 20 && 
-                            timeSinceLastWheel < 50 && 
-                            container._wheelEventCount > 3
-                        );
-                        
-                        if (isTouchpadLike) {
-                            container._isTouchpadRapidZoom = true;
-                        }
-                        
-                        // Apply stricter limits for touchpad-like behavior
-                        let effectiveMaxZoomIn = zoomLimits.MAX_ZOOM_IN;
-                        let effectiveMinZoomOut = 1/zoomLimits.MAX_ZOOM_OUT;
-                        
-                        // If we detect touchpad behavior, we apply stricter limits
-                        if (container._isTouchpadRapidZoom) {
-                            // Make limits stricter for touchpad
-                            effectiveMaxZoomIn *= zoomLimits.TOUCHPAD_SENSITIVITY_ADJUST;
-                            effectiveMinZoomOut /= zoomLimits.TOUCHPAD_SENSITIVITY_ADJUST;
-                        }
-                        
-                        // Check if we've hit limits
-                        if ((zoomingIn && currentZoom >= effectiveMaxZoomIn) || 
-                            (zoomingOut && currentZoom <= effectiveMinZoomOut)) {
-                            // We've hit a limit - prevent further zooming
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return false;
-                        }
-                    } catch (err) {
-                        // Silent error - don't block normal zooming if something fails
-                        console.error("Error in zoom limit check:", err);
-                    }
-                }, { passive: false, capture: true });
-                
-                // Add relayout event handler to force limits after zoom
-                container.on('plotly_relayout', function(eventData) {
-                    // Skip if not a zoom/pan event
-                    if (!eventData || (!eventData['xaxis.range[0]'] && !eventData['yaxis.range[0]'])) return;
-                    
-                    try {
-                        // Get current ranges
-                        const xRange = container.layout.xaxis.range;
-                        const yRange = container.layout.yaxis.range;
-                        
-                        // Calculate current view sizes
-                        const xSize = Math.abs(xRange[1] - xRange[0]);
-                        const ySize = Math.abs(yRange[1] - yRange[0]);
-                        
-                        // Calculate zoom ratios
-                        const xZoom = container._origData.width / xSize;
-                        const yZoom = container._origData.height / ySize;
-                        
-                        // Get the higher zoom ratio (more zoomed in)
-                        const currentZoom = Math.max(xZoom, yZoom);
-                        
-                        // Hard limits - enforce even after events get through
-                        const ABSOLUTE_MAX_ZOOM = zoomLimits.MAX_ZOOM_IN * 1.1; // Allow slight overshoot
-                        const ABSOLUTE_MIN_ZOOM = 1/(zoomLimits.MAX_ZOOM_OUT * 1.1);
-                        
-                        // Check if we're beyond absolute limits
-                        let needsCorrection = false;
-                        let newXRange = [...xRange];
-                        let newYRange = [...yRange];
-                        
-                        if (currentZoom > ABSOLUTE_MAX_ZOOM) {
-                            // Too zoomed in - zoom out to limit
-                            const correction = currentZoom / ABSOLUTE_MAX_ZOOM;
-                            const centerX = (xRange[0] + xRange[1]) / 2;
-                            const centerY = (yRange[0] + yRange[1]) / 2;
-                            const halfWidth = (xSize * correction) / 2;
-                            const halfHeight = (ySize * correction) / 2;
-                            
-                            newXRange = [centerX - halfWidth, centerX + halfWidth];
-                            newYRange = [centerY - halfHeight, centerY + halfHeight];
-                            needsCorrection = true;
-                        }
-                        else if (currentZoom < ABSOLUTE_MIN_ZOOM) {
-                            // Too zoomed out - zoom in to limit
-                            const correction = ABSOLUTE_MIN_ZOOM / currentZoom;
-                            const centerX = (xRange[0] + xRange[1]) / 2;
-                            const centerY = (yRange[0] + yRange[1]) / 2;
-                            const halfWidth = (xSize * correction) / 2;
-                            const halfHeight = (ySize * correction) / 2;
-                            
-                            newXRange = [centerX - halfWidth, centerX + halfWidth];
-                            newYRange = [centerY - halfHeight, centerY + halfHeight];
-                            needsCorrection = true;
-                        }
-                        
-                        // Apply correction if needed
-                        if (needsCorrection) {
-                            Plotly.relayout(container, {
-                                'xaxis.range': newXRange,
-                                'yaxis.range': newYRange
-                            });
-                        }
-                    } catch (err) {
-                        console.error("Error in relayout limit check:", err);
-                    }
-                });
             });
             
             // Set up zoom handlers
@@ -2647,40 +2561,56 @@ function setupKeyboardShortcuts() {
     infoPanel.innerHTML = infoHTML;
 }
         
-        // Create visualizations with the results
-        function createVisualizations(results) {
-            // Fixed temperature scales from -0.08 to 0.08 with 0.02 increments
-            const tempTicks = [-0.08, -0.06, -0.04, -0.02, 0, 0.02, 0.04, 0.06, 0.08];
-            
-            // Fixed flux scales from 0.4 to 1.4 with 0.2 increments
-            const fluxTicks = [0.4, 0.6, 0.8, 1.0, 1.2, 1.4];
-            
-            // Set options for temperature plots
-            const tempOptions = {
-                colorbar: {
-                    tickvals: tempTicks,
-                    ticktext: tempTicks.map(val => val.toFixed(2)),
-                    tickmode: 'array'
-                }
-            };
-            
-            // Set options for flux plots
-            const fluxOptions = {
-                colorbar: {
-                    tickvals: fluxTicks,
-                    ticktext: fluxTicks.map(val => val.toFixed(1)),
-                    tickmode: 'array'
-                }
-            };
-            
-            // Create visualizations
-            createHeatmap(microPlot, results.image, 'Microstructure', 'Viridis');
-            createHeatmap(paramFieldPlot, results.param_field, 'Thermal Conductivity Field', 'Viridis');
-            createHeatmap(temp0Plot, results.temp0, 'Temperature Fluctuation (Load Case 1)', 'Jet', tempOptions);
-            createHeatmap(temp1Plot, results.temp1, 'Temperature Fluctuation (Load Case 2)', 'Jet', tempOptions);
-            createHeatmap(flux0Plot, results.flux_norm0, 'Heat Flux Magnitude (Load Case 1)', 'Jet', fluxOptions);
-            createHeatmap(flux1Plot, results.flux_norm1, 'Heat Flux Magnitude (Load Case 2)', 'Jet', fluxOptions);
+// Modified createVisualizations function to use custom ranges for each flux plot
+function createVisualizations(results) {
+    // Fixed temperature scales from -0.08 to 0.08 with 0.02 increments
+    const tempTicks = [-0.08, -0.06, -0.04, -0.02, 0, 0.02, 0.04, 0.06, 0.08];
+    
+    // Custom flux scales for each load case
+    const flux0Ticks = [0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8]; // 0-1.8 for case 1
+    const flux1Ticks = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]; // 0-3.0 for case 2
+    
+    // Set options for temperature plots
+    const tempOptions = {
+        colorbar: {
+            tickvals: tempTicks,
+            ticktext: tempTicks.map(val => val.toFixed(2)),
+            tickmode: 'array'
         }
+    };
+    
+    // Set options for flux plot 1 (0-1.8 range)
+    const flux0Options = {
+        colorbar: {
+            tickvals: flux0Ticks,
+            ticktext: flux0Ticks.map(val => val.toFixed(1)),
+            tickmode: 'array'
+        },
+        // Set explicit min and max for the color scale
+        zmin: 0,
+        zmax: 1.8
+    };
+    
+    // Set options for flux plot 2 (0-3.0 range)
+    const flux1Options = {
+        colorbar: {
+            tickvals: flux1Ticks,
+            ticktext: flux1Ticks.map(val => val.toFixed(1)),
+            tickmode: 'array'
+        },
+        // Set explicit min and max for the color scale
+        zmin: 0,
+        zmax: 3.0
+    };
+    
+    // Create visualizations
+    createHeatmap(microPlot, results.image, 'Microstructure', 'Viridis');
+    createHeatmap(paramFieldPlot, results.param_field, 'Thermal Conductivity Field', 'Viridis');
+    createHeatmap(temp0Plot, results.temp0, 'Temperature Fluctuation (Load Case 1)', 'Jet', tempOptions);
+    createHeatmap(temp1Plot, results.temp1, 'Temperature Fluctuation (Load Case 2)', 'Jet', tempOptions);
+    createHeatmap(flux0Plot, results.flux_norm0, 'Heat Flux Magnitude (Load Case 1)', 'Jet', flux0Options);
+    createHeatmap(flux1Plot, results.flux_norm1, 'Heat Flux Magnitude (Load Case 2)', 'Jet', flux1Options);
+}
         
         // Run simulation and update visualizations
         async function runSimulation() {
@@ -2848,13 +2778,34 @@ function createHomogeneousVisualizations(image) {
         fluxField.push(row);
     }
     
+    // Set options for flux plots with custom ranges
+    const flux0Options = {
+        colorbar: {
+            tickvals: [0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8],
+            ticktext: [0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8].map(val => val.toFixed(1)),
+            tickmode: 'array'
+        },
+        zmin: 0,
+        zmax: 1.8
+    };
+    
+    const flux1Options = {
+        colorbar: {
+            tickvals: [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0],
+            ticktext: [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0].map(val => val.toFixed(1)),
+            tickmode: 'array'
+        },
+        zmin: 0,
+        zmax: 3.0
+    };
+    
     // Create visualizations with special labels for homogeneous case
     createHeatmap(microPlot, image, 'Microstructure', 'Viridis');
     createHeatmap(paramFieldPlot, paramField, 'Thermal Conductivity Field (Homogeneous κ=1)', 'Viridis');
     createHeatmap(temp0Plot, tempField, 'Temperature Fluctuation (Load Case 1, Homogeneous)', 'Jet');
     createHeatmap(temp1Plot, tempField, 'Temperature Fluctuation (Load Case 2, Homogeneous)', 'Jet');
-    createHeatmap(flux0Plot, fluxField, 'Heat Flux Magnitude (Load Case 1, Homogeneous)', 'Jet');
-    createHeatmap(flux1Plot, fluxField, 'Heat Flux Magnitude (Load Case 2, Homogeneous)', 'Jet');
+    createHeatmap(flux0Plot, fluxField, 'Heat Flux Magnitude (Load Case 1, Homogeneous)', 'Jet', flux0Options);
+    createHeatmap(flux1Plot, fluxField, 'Heat Flux Magnitude (Load Case 2, Homogeneous)', 'Jet', flux1Options);
     
     // Update currentResults with generated fields
     currentResults.param_field = paramField;
@@ -3018,122 +2969,135 @@ async function convertCanvasToArray(canvas) {
         // Toggle between different display modes (e.g., heatmap vs. contour) - IMPROVED VERSION
         let plotModes = {};  // Store current mode for each plot
         
-        function toggleDisplayMode(plotId) {
-            console.log('Toggling display mode for plot:', plotId);
-            const plotElement = document.getElementById(plotId);
-            if (!plotElement || !plotElement.data || !plotElement.data[0]) {
-                console.error('Plot element or data not found:', plotId);
-                return;
-            }
+//toggleDisplayMode to preserve zmin and zmax when switching display modes
+function toggleDisplayMode(plotId) {
+    console.log('Toggling display mode for plot:', plotId);
+    const plotElement = document.getElementById(plotId);
+    if (!plotElement || !plotElement.data || !plotElement.data[0]) {
+        console.error('Plot element or data not found:', plotId);
+        return;
+    }
+    
+    try {
+        // Get current mode or default to 'heatmap'
+        plotModes[plotId] = plotModes[plotId] || 'heatmap';
+        
+        // Get current data
+        const currentData = plotElement.data[0].z;
+        const currentTitle = plotElement.layout.title.text;
+        const colorscale = plotElement.data[0].colorscale || 'Jet';
+        
+        // Get layout settings to preserve
+        const currentLayout = plotElement.layout;
+        
+        // Capture dimensions to preserve
+        const width = currentLayout.width || plotElement.clientWidth;
+        const height = currentLayout.height || plotElement.clientHeight;
+        
+        // Preserve the last zoom state if it exists
+        const lastZoomState = plotElement._lastZoomState;
+        
+        // Get custom zmin/zmax if they exist
+        const zmin = plotElement.data[0].zmin;
+        const zmax = plotElement.data[0].zmax;
+        
+        // Purge the plot before recreating to avoid memory issues
+        Plotly.purge(plotElement);
+        
+        if (plotModes[plotId] === 'heatmap') {
+            // Switch to contour
+            console.log('Switching to contour mode');
+            plotModes[plotId] = 'contour';
             
-            try {
-                // Get current mode or default to 'heatmap'
-                plotModes[plotId] = plotModes[plotId] || 'heatmap';
-                
-                // Get current data
-                const currentData = plotElement.data[0].z;
-                const currentTitle = plotElement.layout.title.text;
-                const colorscale = plotElement.data[0].colorscale || 'Jet';
-                
-                // Get layout settings to preserve
-                const currentLayout = plotElement.layout;
-                
-                // Capture dimensions to preserve
-                const width = currentLayout.width || plotElement.clientWidth;
-                const height = currentLayout.height || plotElement.clientHeight;
-                
-                // Preserve the last zoom state if it exists
-                const lastZoomState = plotElement._lastZoomState;
-                
-                // Purge the plot before recreating to avoid memory issues
-                Plotly.purge(plotElement);
-                
-                if (plotModes[plotId] === 'heatmap') {
-                    // Switch to contour
-                    console.log('Switching to contour mode');
-                    plotModes[plotId] = 'contour';
-                    
-                    const newTrace = {
-                        z: currentData,
-                        type: 'contour',
-                        colorscale: colorscale,
-                        showscale: true,
-                        contours: {
-                            coloring: 'heatmap'
-                        }
-                    };
-                    
-                    // Preserve coloraxis settings and dimensions
-                    const newLayout = {
-                        ...currentLayout,
-                        title: { text: currentTitle, font: { size: 16 } },
-                        width: width,
-                        height: height,
-                        autosize: false
-                    };
-                    
-                    // Create new plot with error handling - use the same efficient zoom handler
-                    try {
-                        Plotly.newPlot(plotElement, [newTrace], newLayout, {
-                            responsive: true,
-                            displayModeBar: false,
-                            scrollZoom: true
-                        });
-                        
-                        // Restore last zoom state
-                        plotElement._lastZoomState = lastZoomState;
-                        
-                        // Set up the same efficient zoom handlers as in createHeatmap
-                        setupEfficientZoomHandlers(plotElement);
-                    } catch (e) {
-                        console.error("Error creating contour plot:", e);
-                        // Revert the mode if failed
-                        plotModes[plotId] = 'heatmap';
-                    }
-                } else {
-                    // Switch back to heatmap
-                    console.log('Switching to heatmap mode');
-                    plotModes[plotId] = 'heatmap';
-                    
-                    const newTrace = {
-                        z: currentData,
-                        type: 'heatmap',
-                        colorscale: colorscale,
-                        showscale: true
-                    };
-                    
-                    // Preserve coloraxis settings and dimensions
-                    const newLayout = {
-                        ...currentLayout,
-                        title: { text: currentTitle, font: { size: 16 } },
-                        width: width,
-                        height: height,
-                        autosize: false
-                    };
-                    
-                    // Create new plot with error handling - use the same efficient zoom handler
-                    try {
-                        Plotly.newPlot(plotElement, [newTrace], newLayout, {
-                            responsive: true,
-                            displayModeBar: false,
-                            scrollZoom: true
-                        });
-                        
-                        // Restore last zoom state
-                        plotElement._lastZoomState = lastZoomState;
-                        
-                        // Set up the same efficient zoom handlers as in createHeatmap
-                        setupEfficientZoomHandlers(plotElement);
-                    } catch (e) {
-                        console.error("Error creating heatmap plot:", e);
-                        // Revert the mode if failed
-                        plotModes[plotId] = 'contour';
-                    }
+            const newTrace = {
+                z: currentData,
+                type: 'contour',
+                colorscale: colorscale,
+                showscale: true,
+                contours: {
+                    coloring: 'heatmap'
                 }
-            } catch (error) {
-                console.error("Error toggling plot mode:", error);
+            };
+            
+            // Preserve zmin/zmax if they exist
+            if (zmin !== undefined) newTrace.zmin = zmin;
+            if (zmax !== undefined) newTrace.zmax = zmax;
+            
+            // Preserve coloraxis settings and dimensions
+            const newLayout = {
+                ...currentLayout,
+                title: { text: currentTitle, font: { size: 16 } },
+                width: width,
+                height: height,
+                autosize: false
+            };
+            
+            // Create new plot with error handling - use the same efficient zoom handler
+            try {
+                Plotly.newPlot(plotElement, [newTrace], newLayout, {
+                    responsive: true,
+                    displayModeBar: false,
+                    scrollZoom: true
+                });
+                
+                // Restore last zoom state
+                plotElement._lastZoomState = lastZoomState;
+                
+                // Set up the same efficient zoom handlers as in createHeatmap
+                setupEfficientZoomHandlers(plotElement);
+            } catch (e) {
+                console.error("Error creating contour plot:", e);
+                // Revert the mode if failed
+                plotModes[plotId] = 'heatmap';
+            }
+        } else {
+            // Switch back to heatmap
+            console.log('Switching to heatmap mode');
+            plotModes[plotId] = 'heatmap';
+            
+            const newTrace = {
+                z: currentData,
+                type: 'heatmap',
+                colorscale: colorscale,
+                showscale: true
+            };
+            
+            // Preserve zmin/zmax if they exist
+            if (zmin !== undefined) newTrace.zmin = zmin;
+            if (zmax !== undefined) newTrace.zmax = zmax;
+            
+            // Preserve coloraxis settings and dimensions
+            const newLayout = {
+                ...currentLayout,
+                title: { text: currentTitle, font: { size: 16 } },
+                width: width,
+                height: height,
+                autosize: false
+            };
+            
+            // Create new plot with error handling - use the same efficient zoom handler
+            try {
+                Plotly.newPlot(plotElement, [newTrace], newLayout, {
+                    responsive: true,
+                    displayModeBar: false,
+                    scrollZoom: true
+                });
+                
+                // Restore last zoom state
+                plotElement._lastZoomState = lastZoomState;
+                
+                // Set up the same efficient zoom handlers as in createHeatmap
+                setupEfficientZoomHandlers(plotElement);
+            } catch (e) {
+                console.error("Error creating heatmap plot:", e);
+                // Revert the mode if failed
+                plotModes[plotId] = 'contour';
             }
         }
+    } catch (error) {
+        console.error("Error toggling plot mode:", error);
+    }
+}
         
         // Handle image upload
         let uploadedImage = null;
